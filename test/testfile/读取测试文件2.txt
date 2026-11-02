@@ -1,0 +1,17 @@
+Hello, World!
+写入第二行
+Hello, World!
+写入第二行Hello, World!
+     写入第二行
+     Hello, World!
+     写入第二行Hello, World!
+          写入第二行
+          Hello, World!
+          写入第二行Hello, World!
+               写入第二行
+               Hello, World!
+               写入第二行Hello, World!
+                    写入第二行
+                    Hello, World!
+                    写入第二行
+
