@@ -1,6 +1,13 @@
 import os
 from pathlib import Path
 
+'''
+读取文件夹下所有txt文件
+1、注意文件编码问题
+2、Windows 路径手写反斜杠 → 换行转义冲突，用 Path 拼接
+3、注意异常处理
+'''
+
 os_folder = os.getcwd()  # 当前系统路径
 txt_folder_path = Path(os_folder) / ".." / "test" / "testfile"  # 进去测试的文件夹
 
