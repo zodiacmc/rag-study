@@ -4,11 +4,10 @@ import requests
 
 from util.GetProperties import GetProperties
 
-API_URL = "https://api.longcat.chat/openai/v1/chat/completions"
-API_KEY = GetProperties().get_property("longcat", "apikey")
+API_URL = GetProperties().get_property("longcat", "longcat_api_url")
+API_KEY = GetProperties().get_property("longcat", "longcat_apikey")
 
-API_URL_GET_MODELS = "https://api.longcat.chat/openai/v1/models"
-API_URL_GET_MODELS_INFO = "https://api.longcat.chat/openai/v1/models/"
+API_URL_GET_MODELS = GetProperties().get_property("longcat", "longcat_api_url_get_models")
 
 
 def chat(messages, model="LongCat-2.5", temperature=0.3, stream=False):
@@ -135,7 +134,7 @@ def get_models_info():
     model_json_info = {}
     if len(model_name_list) > 0:
         for model_name in model_name_list:
-            resp = requests.get(API_URL_GET_MODELS_INFO + model_name, headers={"Authorization": f"Bearer {API_KEY}"})
+            resp = requests.get(API_URL_GET_MODELS + model_name, headers={"Authorization": f"Bearer {API_KEY}"})
             model_json_info[model_name] = resp.json()
 
     return model_json_info
@@ -238,4 +237,3 @@ if __name__ == "__main__":
         answer = chat(history, stream=True)
         history.append({"role": "assistant", "content": answer})
         print("AI：", answer)
-
