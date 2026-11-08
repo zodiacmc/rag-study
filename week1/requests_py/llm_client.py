@@ -141,17 +141,18 @@ def get_models_info():
     return model_json_info
 
 
-def chat_stream(question: str):
+def chat_stream(messages: json):
     """
     流式请求
-    :param question: str 问题
+    :param messages: json 格式的 messages 问题
+     [
+        {"role": "system", "content": "xxxx"},
+        {"role": "user", "content": "xxxxxx"},
+    ]
     """
     payload = {
         "model": "LongCat-2.5",
-        "messages": [
-            {"role": "system", "content": "你是一个知识库助手，回答简洁准确"},
-            {"role": "user", "content": question},
-        ],
+        "messages": messages,
         "temperature": 0.3,  # 问答场景调低
         "stream": True,
     }
@@ -183,17 +184,58 @@ def chat_stream(question: str):
         print(delta, end="", flush=True)  # 不换行、立即打印 → 打字机效果
 
 
+def chat_stream2(messages):
+    """
+    流式请求（生成器版本），逐段 yield delta 文本，供 FastAPI StreamingResponse 使用。
+    :param messages: [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]
+    :yield: 每段增量文本字符串
+    """
+    payload = {
+        "model": "LongCat-2.5",
+        "messages": messages,
+        "temperature": 0.3,
+        "stream": True,
+    }
+    resp = requests.post(API_URL, json=payload,
+                         headers={"Authorization": f"Bearer {API_KEY}"},
+                         timeout=60, stream=True)
+    resp.raise_for_status()
+
+    for line in resp.iter_lines():
+        if not line:
+            continue
+        text = line.decode("utf-8")
+        if not text.startswith("data:"):
+            continue
+        chunk = text[len("data:"):].strip()
+        if chunk == "[DONE]":
+            break
+        try:
+            json_data = json.loads(chunk)
+        except json.JSONDecodeError:
+            continue
+        if (json_data and json_data.get("choices")
+                and len(json_data["choices"]) > 0
+                and json_data["choices"][0].get("delta")):
+            delta = json_data["choices"][0]["delta"].get("content", "")
+            if delta:
+                yield delta
+
+
 # messages = [{"role": "user", "content": "你在干什么？？？"}]
 # print(chat(messages))
 # print(chat(messages, stream=True))
-# 多轮对话
-history = [{"role": "system", "content": "你是知识库助手"}]
 
-while True:
-    user_input = input("你问：")
-    if user_input in ("exit", "退出"):
-        break
-    history.append({"role": "user", "content": user_input})
-    answer = chat(history, stream=True)
-    history.append({"role": "assistant", "content": answer})
-    print("AI：", answer)
+if __name__ == "__main__":
+    # 多轮对话：只有直接运行 python llm_client.py 时才执行，被 import 时不跑
+    history = [{"role": "system", "content": "你是知识库助手，请基于知识库进行回答"}]
+
+    while True:
+        user_input = input("你问：")
+        if user_input in ("exit", "退出"):
+            break
+        history.append({"role": "user", "content": user_input})
+        answer = chat(history, stream=True)
+        history.append({"role": "assistant", "content": answer})
+        print("AI：", answer)
+
