@@ -6,6 +6,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from TextCleaner import TextCleaner
 
+
 def test_text_chunking():
     """测试对文本进行分块"""
     text = open("../week2/out_text/法律法规类/中华人民共和国民法典_20200528.txt", encoding="utf-8").read()
@@ -33,21 +34,20 @@ def test_text_chunking():
         print(f"块大小={size} → {len(cs)} 块，平均 {len(text) // len(cs)} 字/块")
 
 
-def file_text_chunking(file:str):
+def file_text_chunking(file: str) -> list:
     """对文件进行分块"""
     # 空判断和是否是txt文件
     if file is None or file == "" or not Path(file).is_file() or not file.endswith(".txt"):
         print("请传入正确的文件路径")
-        return
-    text = ""
-    try :
+        return []
+    try:
         with open(file, "r", encoding="utf-8") as f:
             text = f.read()
         if text == "":
             print("文件内容为空")
-            return
+            return []
 
-        text = TextCleaner().clean(text) # 先都去清理一下吧
+        text = TextCleaner().clean(text)  # 先都去清理一下吧
         print(f"文件内容长度：{len(text)} 字")
 
         splitter = RecursiveCharacterTextSplitter(
@@ -57,14 +57,10 @@ def file_text_chunking(file:str):
         )
         chunks = splitter.split_text(text)
         print(f"切成了 {len(chunks)} 块")
-        print("---第1块---")
-        print(chunks[0])
-        print("---第2块---")
-        print(chunks[1])
-
+        return chunks
     except Exception as e:
         print(f"读取文件出错：{e}")
-        return
+        return []
 
 
 if __name__ == "__main__":

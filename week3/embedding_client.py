@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+# 把项目根目录加入 sys.path，保证直接运行脚本能 import util
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import requests
 from util.GetProperties import GetProperties
 
@@ -49,19 +55,20 @@ def cosine_sim(a, b):
 # print(f"问题 vs 句子1：{cosine_sim(vecs[0], vecs[1]):.4f}")  # 应该 > 0.8
 # print(f"问题 vs 句子2：{cosine_sim(vecs[0], vecs[2]):.4f}")  # 应该 < 0.3
 
-# 问题
-question = "技术咨询合同和技术服务合同有什么规定"
-question_vec = get_embedding(question)
+if __name__ == "__main__":
+    # 问题
+    question = "技术咨询合同和技术服务合同有什么规定"
+    question_vec = get_embedding(question)
 
-sentence_list = ["技术咨询合同的受托人应当按照约定的期限完成咨询报告或者解答问题，提出的咨询报告应当达到约定的要求。",
-                 "管理人管理事务不属于前条规定的情形，但是受益人享有管理利益的，受益人应当在其获得的利益范围内向管理人承担前条第一款规定的义务。",
-                 "青霉素可以治疗什么?"]
+    sentence_list = ["技术咨询合同的受托人应当按照约定的期限完成咨询报告或者解答问题，提出的咨询报告应当达到约定的要求。",
+                     "管理人管理事务不属于前条规定的情形，但是受益人享有管理利益的，受益人应当在其获得的利益范围内向管理人承担前条第一款规定的义务。",
+                     "青霉素可以治疗什么?"]
 
-# 获取三个句子和问题的相关性，并按照相关性进行逆序排列
-sentence_scores = [(sentence, cosine_sim(question_vec, get_embedding(sentence))) for sentence in sentence_list]
+    # 获取三个句子和问题的相关性，并按照相关性进行逆序排列
+    sentence_scores = [(sentence, cosine_sim(question_vec, get_embedding(sentence))) for sentence in sentence_list]
 
-sentence_scores = sorted(sentence_scores, key=lambda x: x[1], reverse=True)
-print(sentence_scores)
+    sentence_scores = sorted(sentence_scores, key=lambda x: x[1], reverse=True)
+    print(sentence_scores)
 
 
 
