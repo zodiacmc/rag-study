@@ -48,6 +48,11 @@ def retrieve(question, top_k=3):
         return
 
     q_vec = get_embedding(question)
+
+    # 如果获取向量异常，抛出一个错误
+    if q_vec is None:
+        raise ValueError("Failed to get embedding for question")
+
     # 先取 top_k 的 3 倍作为候选池，去重后再裁到 top_k，避免重复块占满名额
     pool_size = top_k * 3
     results = col.query(query_embeddings=[q_vec], n_results=pool_size)
@@ -61,20 +66,24 @@ def retrieve(question, top_k=3):
         print("  未检索到相关内容\n")
         return
 
-    kept = []  # (doc, dist, meta, normalized)
+    kept = []       # (doc, dist, meta)
+    kept_norms = []  # 与 kept 一一对应的归一化正文，仅用于判重
     for doc, dist, meta in zip(docs, dists, metas):
         norm = _normalize(doc)
-        if any(_is_duplicate(norm, item[3]) for item in kept):
+        if any(_is_duplicate(norm, n) for n in kept_norms):
             continue
-        kept.append((doc, dist, meta, norm))
+        kept.append((doc, dist, meta))
+        kept_norms.append(norm)
         if len(kept) == top_k:
             break
 
-    for i, (doc, dist, meta, _) in enumerate(kept, 1):
-        print(f"【Top{i}】距离={dist:.3f} 来源={meta['source']}")
-        print(f"  {doc}...\n")
-
+    if __name__ == "__main__":
+        for i, (doc, dist, meta) in enumerate(kept, 1):
+            print(f"【Top{i}】距离={dist:.3f} 来源={meta['source']}")
+            print(f"  {doc}...\n")
+    return kept
 
 # 测试
-retrieve("打印功能提示")
-retrieve("加班费标准")
+if __name__ == "__main__":
+    # retrieve("打印功能提示")
+    retrieve("什么情形可以索要违约赔偿")

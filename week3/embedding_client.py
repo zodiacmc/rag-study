@@ -11,18 +11,41 @@ API_KEY = GetProperties().get_property("aliyun", "aliyun_apikey")
 API_URL = GetProperties().get_property("aliyun", "aliyun_multimodal_embedding_url")
 MODEL = "qwen3-vl-embedding"
 
+# 单次批量请求最多携带的文本条数，超出则分批调用
+BATCH_SIZE = 16
 
-def get_embedding(text):
-    """把一段文字变成向量（数字列表）"""
-    input_json = {"contents": [{"text": text}]}
+
+def _post_batch(texts):
+    """向 embedding 接口发起一次批量请求，返回与 texts 顺序一致的向量列表。"""
+    input_json = {"contents": [{"text": t} for t in texts]}
     resp = requests.post(
         API_URL,
         headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
         json={"model": MODEL, "input": input_json},
         timeout=30
     )
+    resp.raise_for_status()
     data = resp.json()
-    return data["output"]["embeddings"][0]["embedding"]
+    embs = data["output"]["embeddings"]
+    if len(embs) != len(texts):
+        raise ValueError(f"embedding 返回数量 {len(embs)} 与输入 {len(texts)} 不一致")
+    return [e["embedding"] for e in embs]
+
+
+def get_embeddings(texts):
+    """批量把多段文字变成向量，返回与输入顺序一致的向量列表。"""
+    if not texts:
+        return []
+    vecs = []
+    for start in range(0, len(texts), BATCH_SIZE):
+        batch = texts[start:start + BATCH_SIZE]
+        vecs.extend(_post_batch(batch))
+    return vecs
+
+
+def get_embedding(text):
+    """把一段文字变成向量（数字列表）"""
+    return get_embeddings([text])[0]
 
 
 import math
