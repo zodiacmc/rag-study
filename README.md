@@ -29,6 +29,9 @@
     - rag_chain.py：最小 RAG 链——检索片段+来源 → 拼上下文 → 约束 Prompt → 调大模型生成
     - diag_chroma.py：Chroma 通用排查脚本（sqlite 直读 + 客户端核对条数/维度/样本）
     - server_rag.py：RAG 后端 FastAPI 服务，提供 /health、/search、/upload、/ask、/ask/stream 接口；文件上传需 python-multipart
+- week4/：LangChain 入门与 LangChain 版 RAG 链（Day22–Day23）
+    - langchain_basic.py（Day22）：PromptTemplate | ChatOpenAI | StrOutputParser 最小链，非流式 + 流式调用
+    - rag_langchain.py（Day23）：LangChain 版 RAG 链；自定义 DashScopeEmbeddings 复用 week3 向量化；确定性 ID 幂等入库
 
 ## 运行
 
@@ -95,3 +98,14 @@ pip install python-multipart   # FastAPI 表单 / 文件上传需要这个依赖
 - 本地库路径一律用 `__file__` 推导绝对路径，不依赖相对工作目录。
 - `/upload` 安全校验：文件名取 basename 防目录穿越、后缀白名单（.txt/.md/.csv）、5MB 大小上限、UTF-8/GBK 解码校验、清洗后判空。
 - 向量化改批量请求：`get_embeddings(texts)` 一次携带多条文本、按 16 条分批，返回顺序对齐并校验条数，避免逐块循环调用。
+
+### Day22 LangChain 入门踩坑备忘
+
+- `ChatOpenAI` 的 `base_url` 传 OpenAI 兼容**根地址**（SDK 自动拼 `/chat/completions`）；把完整 `chat/completions` 路径传入会路径重复报 404，取配置里的 `*_api_base_url` 而非 `*_api_url`。
+- 子目录脚本直接运行找不到 `util`：顶部用 `Path(__file__).resolve().parent.parent` 把项目根目录加入 `sys.path`。
+
+### Day23 LangChain 版 RAG 链踩坑备忘
+
+- langchain 1.x 经典 chains 拆到独立包 `langchain-classic`：`create_retrieval_chain` / `create_stuff_documents_chain` 从 `langchain_classic.chains` 导入，旧 `langchain.chains` 路径取不到。
+- `OpenAIEmbeddings` 只兼容 OpenAI `/embeddings` 协议；阿里云多模态 embedding 报文（`input.contents` → `output.embeddings`）不同会 404，需自定义 `Embeddings` 封装复用现有 `get_embeddings`。
+- `from_documents` 不传 `ids` 时每条生成随机 UUID，重复运行 `upsert` 也覆盖不了旧块、会重复累积；传确定性 `ids`（文件名_序号）实现幂等更新，改后需先清一次旧持久化目录。
