@@ -1,5 +1,5 @@
 #忽略目录
 .idea/
 .venv/
-./config.properties
 week3/chroma_db/
+/resources/config.properties
