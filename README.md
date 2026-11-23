@@ -32,6 +32,7 @@
 - week4/：LangChain 入门与 LangChain 版 RAG 链（Day22–Day23）
     - langchain_basic.py（Day22）：PromptTemplate | ChatOpenAI | StrOutputParser 最小链，非流式 + 流式调用
     - rag_langchain.py（Day23）：LangChain 版 RAG 链；自定义 DashScopeEmbeddings 复用 week3 向量化；确定性 ID 幂等入库
+    - local_chat_cli.py：本地 Ollama 命令行多轮对话脚本（流式输出、保留历史）；顶部常量 `MODEL_BACKEND` 可切换本地 / longcat 后端，`OLLAMA_MODEL` 可改模型名；运行 `python week4/local_chat_cli.py`（本地后端需先启动 Ollama 并拉取模型，longcat 后端需配置 week1 的 longcat 属性）
 
 ## 运行
 
@@ -109,3 +110,9 @@ pip install python-multipart   # FastAPI 表单 / 文件上传需要这个依赖
 - langchain 1.x 经典 chains 拆到独立包 `langchain-classic`：`create_retrieval_chain` / `create_stuff_documents_chain` 从 `langchain_classic.chains` 导入，旧 `langchain.chains` 路径取不到。
 - `OpenAIEmbeddings` 只兼容 OpenAI `/embeddings` 协议；阿里云多模态 embedding 报文（`input.contents` → `output.embeddings`）不同会 404，需自定义 `Embeddings` 封装复用现有 `get_embeddings`。
 - `from_documents` 不传 `ids` 时每条生成随机 UUID，重复运行 `upsert` 也覆盖不了旧块、会重复累积；传确定性 `ids`（文件名_序号）实现幂等更新，改后需先清一次旧持久化目录。
+
+### Day24/25 本地 Ollama RAG 踩坑备忘
+
+- 本机 Ollama 0.40.17 的 `/api/embed` 有大批量缺陷：批量 ≤100 条稳定成功，300 条约 50% 失败，报 `400 / tokenize connection refused`，`ollama stop` 清理 runner 无效；与请求参数（options/keep_alive）无关。规避：embedding 分批 ≤50 条 + 单批重试 3 次（`week4/local_rag.py` 的 `SafeOllamaEmbeddings`）。
+- 向量库重复运行会累积重复向量：先连集合判空，非空复用、空库才写入。
+- 完整排查过程与代码要点见 [week4/local_rag-调试记录-2026-11-23.md](week4/local_rag-调试记录-2026-11-23.md)。

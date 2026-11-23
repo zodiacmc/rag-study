@@ -2,4 +2,11 @@
 .idea/
 .venv/
 week3/chroma_db/
+/week4/chroma_db_langchain/
+/.claude/
+/openspec/
+
+
 /resources/config.properties
+.mcp.json
+/week4/chroma_local/

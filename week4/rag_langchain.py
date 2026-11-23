@@ -7,7 +7,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from langchain_chroma import Chroma
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_community.document_loaders import TextLoader
 from langchain_core.embeddings import Embeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -31,33 +30,39 @@ class DashScopeEmbeddings(Embeddings):
         return get_embeddings([text])[0]
 
 
-def rag_langchain(input_str: str, input_docs):
+def rag_langchain(input_str: str, input_docs: list | None = None):
     print("RAG with LangChain")
-    # 1. 加载
-    # docs = TextLoader("test_docs/_txt/民法典.txt", encoding="utf-8").load()
 
-    # 2. 分块
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=400, chunk_overlap=80,
-        separators=["\n\n", "\n", "。", "，", " ", ""]
-    )
-    chunks = splitter.split_documents(input_docs)
+    if not input_docs:
+        #  如果没有文档  直接获取向量库
+        vector_store = Chroma(persist_directory="./chroma_db_langchain", embedding_function=DashScopeEmbeddings())
+    else:
+        # 1. 加载
+        # docs = TextLoader("test_docs/_txt/民法典.txt", encoding="utf-8").load()
 
-    print(f"分块数: {len(chunks)}")
+        # 2. 分块
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=400, chunk_overlap=80,
+            separators=["\n\n", "\n", "。", "，", " ", ""]
+        )
+        chunks = splitter.split_documents(input_docs)
 
-    # 3. 向量化 + 存库：复用 week3 的阿里云多模态 embedding 封装
-    embeddings = DashScopeEmbeddings()
+        print(f"分块数: {len(chunks)}")
 
-    # 确定性 ID：来源文件名 + 块序号。重复运行时 upsert 按同一 ID 覆盖，避免随机 UUID 导致重复块累积。
-    source_name = Path(chunks[0].metadata.get("source", "doc")).name if chunks else "doc"
-    ids = [f"{source_name}_{i}" for i in range(len(chunks))]
+        # 3. 向量化 + 存库：复用 week3 的阿里云多模态 embedding 封装
+        embeddings = DashScopeEmbeddings()
 
-    vector_store = Chroma.from_documents(
-        documents=chunks,
-        embedding=embeddings,
-        ids=ids,
-        persist_directory="./chroma_db_langchain",
-    )
+        # 确定性 ID：来源文件名 + 块序号。重复运行时 upsert 按同一 ID 覆盖，避免随机 UUID 导致重复块累积。
+        source_name = Path(chunks[0].metadata.get("source", "doc")).name if chunks else "doc"
+        ids = [f"{source_name}_{i}" for i in range(len(chunks))]
+
+        vector_store = Chroma.from_documents(
+            documents=chunks,
+            embedding=embeddings,
+            ids=ids,
+            persist_directory="./chroma_db_langchain",
+        )
+
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
     # 4. 模型 + 提示词 + QA 链
@@ -84,6 +89,7 @@ def rag_langchain(input_str: str, input_docs):
 
 
 if __name__ == "__main__":
-    docs = TextLoader("../week2/out_text/中华人民共和国婚姻法_20010428.txt", encoding="utf-8").load()
-    rag_langchain("婚姻法是什么时候开始实施的？", docs)
+    # docs = TextLoader("../week2/out_text/中华人民共和国婚姻法_20010428.txt", encoding="utf-8").load()
+    # rag_langchain("婚姻法是什么时候开始实施的？", docs)
+    rag_langchain("怎么离婚？")
 
